@@ -147,6 +147,9 @@ vite.config.ts.timestamp-*
 # Notas de mentoria (diários, regras, auth): SÓ local, nunca na submissão pública
 _mentoria/
 
+# Instruções de mentoria do Claude: úteis localmente, fora da submissão pública
+CLAUDE.md
+
 # Segredos — NUNCA versionar (reforço além do bloco dotenv acima)
 .env
 .env.*
