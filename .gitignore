@@ -141,3 +141,30 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# ===== PokéPortfolio AI — regras próprias =====
+
+# Notas de mentoria (diários, regras, auth): SÓ local, nunca na submissão pública
+_mentoria/
+
+# Segredos — NUNCA versionar (reforço além do bloco dotenv acima)
+.env
+.env.*
+!.env.example
+*.key
+*credentials*.json
+service-account*.json
+
+# Python (agente ADK + MCP server)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.uv/
+.pytest_cache/
+.ruff_cache/
+
+# Sistema
+.DS_Store
+Thumbs.db
