@@ -158,6 +158,10 @@ CLAUDE.md
 *credentials*.json
 service-account*.json
 
+# ADK runtime — banco de sessão local (histórico de conversa do `adk run`).
+# Artefato de runtime: muda a cada execução e não deve ir pro repo público.
+.adk/
+
 # Python (agente ADK + MCP server)
 __pycache__/
 *.py[cod]

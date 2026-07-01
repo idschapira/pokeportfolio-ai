@@ -13,47 +13,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
-from zoneinfo import ZoneInfo
+import os
+import sys
 
+from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
+from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams
 from google.genai import types
+from mcp import StdioServerParameters
+from mcp.client.stdio import get_default_environment
 
+from app.prompts import ROOT_AGENT_INSTRUCTION
 
-def get_weather(query: str) -> str:
-    """Simulates a web search. Use it get information on weather.
+load_dotenv()
 
-    Args:
-        query: A string containing the location to get weather information for.
+_REQUIRED_CARD_API_ENV_VARS = ("CARD_API_KEY", "CARD_API_BASE_URL")
+for _var in _REQUIRED_CARD_API_ENV_VARS:
+    if not os.environ.get(_var):
+        raise RuntimeError(f"Missing required environment variable: {_var}")
 
-    Returns:
-        A string with the simulated weather information for the queried location.
-    """
-    if "sf" in query.lower() or "san francisco" in query.lower():
-        return "It's 60 degrees and foggy."
-    return "It's 90 degrees and sunny."
+# The MCP server (mcp_server/server.py) runs as a stdio subprocess: ADK
+# launches it, talks MCP over its stdin/stdout, and the tools it exposes
+# (resolve_card, get_price) show up to the agent like any other tool.
+# `get_default_environment()` gives the subprocess a minimal safe env
+# (PATH, HOME, ...); we layer the card API credentials on top by reference
+# to os.environ — their values are never written to code or logs.
+_mcp_server_env = get_default_environment()
+for _var in _REQUIRED_CARD_API_ENV_VARS:
+    _mcp_server_env[_var] = os.environ[_var]
 
-
-def get_current_time(query: str) -> str:
-    """Simulates getting the current time for a city.
-
-    Args:
-        city: The name of the city to get the current time for.
-
-    Returns:
-        A string with the current time information.
-    """
-    if "sf" in query.lower() or "san francisco" in query.lower():
-        tz_identifier = "America/Los_Angeles"
-    else:
-        return f"Sorry, I don't have timezone information for query: {query}."
-
-    tz = ZoneInfo(tz_identifier)
-    now = datetime.datetime.now(tz)
-    return f"The current time for query {query} is {now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}"
-
+card_mcp_toolset = McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "mcp_server.server"],
+            env=_mcp_server_env,
+        ),
+        timeout=15.0,
+    ),
+)
 
 root_agent = Agent(
     name="root_agent",
@@ -61,8 +61,8 @@ root_agent = Agent(
         model="gemini-flash-latest",
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
-    instruction="You are a helpful AI assistant designed to provide accurate and useful information.",
-    tools=[get_weather, get_current_time],
+    instruction=ROOT_AGENT_INSTRUCTION,
+    tools=[card_mcp_toolset],
 )
 
 app = App(
