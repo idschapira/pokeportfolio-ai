@@ -20,12 +20,14 @@ from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models import Gemini
+from google.adk.tools import FunctionTool
 from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams
 from google.genai import types
 from mcp import StdioServerParameters
 from mcp.client.stdio import get_default_environment
 
 from app.prompts import ROOT_AGENT_INSTRUCTION
+from app.tools import get_portfolio, save_cards
 
 load_dotenv()
 
@@ -55,6 +57,11 @@ card_mcp_toolset = McpToolset(
     ),
 )
 
+# require_confirmation=True is ADK's native HITL gate: the runtime pauses
+# this tool call and requires an explicit human ToolConfirmation before
+# save_cards() ever runs, independent of what the LLM/prompt decides.
+save_cards_tool = FunctionTool(func=save_cards, require_confirmation=True)
+
 root_agent = Agent(
     name="root_agent",
     model=Gemini(
@@ -62,7 +69,7 @@ root_agent = Agent(
         retry_options=types.HttpRetryOptions(attempts=3),
     ),
     instruction=ROOT_AGENT_INSTRUCTION,
-    tools=[card_mcp_toolset],
+    tools=[card_mcp_toolset, save_cards_tool, get_portfolio],
 )
 
 app = App(
